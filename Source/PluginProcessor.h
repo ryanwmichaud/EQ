@@ -10,6 +10,8 @@
 
 #include <JuceHeader.h>
 
+
+
 //==============================================================================
 /**
 */
@@ -52,6 +54,13 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+
+
+    //function to provide list of params as an apvts parameter layout
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParamterLayout();
+    
+    juce::AudioProcessorValueTreeState apvts{*this, nullptr, "Parameters", createParamterLayout()};
+    
 
 private:
     //==============================================================================

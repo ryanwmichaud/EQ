@@ -10,6 +10,15 @@
 
 #include <JuceHeader.h>
 
+//extract parameters from apvts
+struct ChainSettings{
+    float peakFreq {0}, peakGainInDecibles {0}, peakQuality {1.f};
+    float lowCutFreq {0}, highCutFreq {0};
+    int lowCutSlope {0}, highCutSlope {0};
+};
+
+ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
+
 
 
 //==============================================================================
@@ -71,6 +80,13 @@ private:
     //we'll have 2 instances of it to do stereo processing
     using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
     MonoChain leftChain, rightChain;
+    
+    //enum to help us remember positions of filters in the chain
+    enum ChainPositions{
+        LowCut,
+        Peak,
+        HighCut
+    };
     
     
     //==============================================================================

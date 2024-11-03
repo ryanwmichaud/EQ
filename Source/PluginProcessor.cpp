@@ -96,7 +96,8 @@ void EQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    
+    DBG("reached prep2play");
+
     
     //prepare channels by passing a process spec object to the chains which will pass it to each link in the chain
     
@@ -108,6 +109,21 @@ void EQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     //pass it to each chain to prepare them for processing
     leftChain.prepare(spec);
     rightChain.prepare(spec);
+    
+    DBG("about to get chain settings from ");
+    
+    auto chainSettings = getChainSettings(apvts);
+    DBG("about to get make pfcoeffs");
+    //makepeakfilter makes our filter coefficients from our parameters. convert decibles to gain
+    auto peakCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate,
+                                                                                chainSettings.peakFreq,
+                                                                                chainSettings.peakQuality,
+                                                                                juce::Decibels::decibelsToGain(chainSettings.peakGainInDecibles));
+    DBG("about to pass chain settings to chains");
+    //get the peak filter from the chain using the enum we defd in the header. assign its coefficents to what we just defined above
+    *leftChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
+    *rightChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
+    
     
 }
 
@@ -145,6 +161,7 @@ bool EQAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 
 void EQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    DBG("reached processblock");
     
     //gets a buffer. extract right and left channels. 0 and 1
     //make a processing context for the chain. needs an audio block
@@ -163,6 +180,18 @@ void EQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
     // this code if your algorithm always overwrites all the output channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
+    
+    //update param values before we process audio
+    auto chainSettings = getChainSettings(apvts);
+    //makepeakfilter makes our filter coefficients from our parameters. convert decibles to gain
+    auto peakCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(),
+                                                                                chainSettings.peakFreq,
+                                                                                chainSettings.peakQuality,
+                                                                                juce::Decibels::decibelsToGain(chainSettings.peakGainInDecibles));
+    
+    //get the peak filter from the chain using the enum we defd in the header. assign its coefficents to what we just defined above
+    *leftChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
+    *rightChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
 
     
     
@@ -211,6 +240,22 @@ void EQAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
     // whose contents will have been created by the getStateInformation() call.
 }
 
+//get parameters from apvts in form of the ChainSettings struct we declared in header
+ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts){
+    ChainSettings settings;
+    
+    
+    settings.lowCutFreq = apvts.getRawParameterValue("LowCut Freq")->load(); //raw gets it in our original range not normalizes
+    settings.highCutFreq = apvts.getRawParameterValue("HighCut Freq")->load();
+    settings.peakFreq = apvts.getRawParameterValue("Peak Freq")->load();
+    settings.peakGainInDecibles = apvts.getRawParameterValue("Peak Gain")->load();
+    settings.peakQuality = apvts.getRawParameterValue("Peak Quality")->load();
+    settings.lowCutSlope = apvts.getRawParameterValue("LowCut Slope")->load();
+    settings.highCutSlope = apvts.getRawParameterValue("HighCut Slope")->load();
+    
+    return settings;
+}
+
 juce::AudioProcessorValueTreeState::ParameterLayout EQAudioProcessor::createParamterLayout(){
     
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
@@ -254,7 +299,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout EQAudioProcessor::createPara
                                                             0)); //default value
     layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID {"HighCut Slope", 1}, "HighCut Slope", stringArray,0));
     
-    DBG("Parameter Layout Created with Parameters:");
+
     
     
     

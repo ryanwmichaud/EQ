@@ -63,6 +63,16 @@ public:
     
 
 private:
+    //aliases
+    using Filter = juce::dsp::IIR::Filter<float>;
+    //define a chain. pass in a processing context which will run through each element of the chain. put 4 filters through. can configure as different types of filters peak, shelf, notch etc.
+    using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
+    //define a chain to rep the whole mono signal path
+    //we'll have 2 instances of it to do stereo processing
+    using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
+    MonoChain leftChain, rightChain;
+    
+    
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (EQAudioProcessor)
 };

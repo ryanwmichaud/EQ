@@ -96,6 +96,19 @@ void EQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+    
+    
+    //prepare channels by passing a process spec object to the chains which will pass it to each link in the chain
+    
+    juce::dsp::ProcessSpec spec;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.numChannels = 1; //mono chain can only handle 1 channel
+    spec.sampleRate = sampleRate;
+    
+    //pass it to each chain to prepare them for processing
+    leftChain.prepare(spec);
+    rightChain.prepare(spec);
+    
 }
 
 void EQAudioProcessor::releaseResources()
@@ -132,6 +145,12 @@ bool EQAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 
 void EQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    
+    //gets a buffer. extract right and left channels. 0 and 1
+    //make a processing context for the chain. needs an audio block
+    
+    
+    
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -145,18 +164,24 @@ void EQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
-    }
+    
+    
+    juce::dsp::AudioBlock<float> block(buffer); //make a block. wraps the buffer. use it to extract channels
+    auto leftBlock = block.getSingleChannelBlock(0);
+    auto rightBlock = block.getSingleChannelBlock(1);
+    
+    //now we have audio blocks representing each channel. now create processing contexts that wrap each block
+    juce::dsp::ProcessContextReplacing<float> leftContext(leftBlock);
+    juce::dsp::ProcessContextReplacing<float> rightContext(rightBlock);
+    
+    //now we have blocks and contexts for each cahnnel. pass contexts to the mono filter chains
+    leftChain.process(leftContext);
+    rightChain.process(rightContext);
+    
+    
+       
+    
+    
 }
 
 //==============================================================================

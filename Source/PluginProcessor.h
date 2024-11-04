@@ -10,11 +10,18 @@
 
 #include <JuceHeader.h>
 
-//extract parameters from apvts
+enum Slope{
+    Slope_12,
+    Slope_24,
+    Slope_36,
+    Slope_48
+};
+
+//nicer way to structure our parameters from apvts
 struct ChainSettings{
     float peakFreq {0}, peakGainInDecibles {0}, peakQuality {1.f};
     float lowCutFreq {0}, highCutFreq {0};
-    int lowCutSlope {0}, highCutSlope {0};
+    int lowCutSlope { Slope::Slope_12 }, highCutSlope { Slope::Slope_12 };
 };
 
 ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
@@ -74,7 +81,7 @@ public:
 private:
     //aliases
     using Filter = juce::dsp::IIR::Filter<float>;
-    //define a chain. pass in a processing context which will run through each element of the chain. put 4 filters through. can configure as different types of filters peak, shelf, notch etc.
+    //define a chain. pass in a processing context which will run through each element of the chain. put 4 filters through. one for each slope value (order) here (db/octave). can configure as different types of filters peak, shelf, notch etc. 
     using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
     //define a chain to rep the whole mono signal path
     //we'll have 2 instances of it to do stereo processing
